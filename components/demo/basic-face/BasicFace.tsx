@@ -119,11 +119,10 @@ export default function BasicFace({
             {/* Left Eye */}
             <g
               className="eye"
-              transform={`translate(60, 85)`}
+              transform={`translate(60, 100) scale(1, ${eyeScale})`}
               style={{
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
-                transform: `scaleY(${eyeScale})`,
               }}
             >
               <circle r="22" fill="white" />
@@ -132,11 +131,10 @@ export default function BasicFace({
             {/* Right Eye */}
             <g
               className="eye"
-              transform={`translate(140, 85)`}
+              transform={`translate(140, 100) scale(1, ${eyeScale})`}
               style={{
                 transformBox: 'fill-box',
                 transformOrigin: 'center',
-                transform: `scaleY(${eyeScale})`,
               }}
             >
               <circle r="22" fill="white" />
@@ -147,14 +145,14 @@ export default function BasicFace({
           {/* Mouth */}
           <g
             className="mouth"
-            transform="translate(100, 150)"
+            transform="translate(100, 140)"
             style={{
               transformBox: 'fill-box',
               transformOrigin: 'center',
               transform: `scaleY(${Math.max(0.1, mouthScale * 3)})`,
             }}
           >
-            <path d="M-35,0 a35,15 0 0,0 70,0" fill="black" />
+            <ellipse cx="0" cy="0" rx="35" ry="15" fill="black" />
           </g>
         </g>
       </svg>

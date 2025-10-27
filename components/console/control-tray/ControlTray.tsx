@@ -61,7 +61,9 @@ function ControlTray({ children }: ControlTrayProps) {
       ]);
     };
     if (connected && !muted && audioRecorder) {
-      audioRecorder.on('data', onData).start();
+      audioRecorder.on('data', onData).start().catch(err => {
+        console.error('Failed to start audio recorder:', err);
+      });
     } else {
       audioRecorder.stop();
     }

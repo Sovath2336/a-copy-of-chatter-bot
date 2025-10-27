@@ -11,7 +11,7 @@
  *
  *     http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable aggregator or agreed to in writing, software
+ * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the License for the specific language governing permissions and
@@ -23,7 +23,8 @@ import AudioRecordingWorklet from './worklets/audio-processing';
 import VolMeterWorket from './worklets/vol-meter';
 
 import { createWorketFromSrc } from './audioworklet-registry';
-import EventEmitter from 'eventemitter3';
+// FIX: Changed import to use `require` syntax for CommonJS compatibility.
+import EventEmitter = require('eventemitter3');
 
 function arrayBufferToBase64(buffer: ArrayBuffer) {
   var binary = '';
@@ -36,11 +37,13 @@ function arrayBufferToBase64(buffer: ArrayBuffer) {
 }
 
 // FIX: Add event types to EventEmitter to correctly type the `emit` method.
-// Fix: Changed event argument types from function signatures to tuples.
-export class AudioRecorder extends EventEmitter<{
-  data: [data: string];
-  volume: [volume: number];
-}> {
+// Fix: Changed event argument types to function signatures to fix compilation errors.
+// Fix: Property 'emit' does not exist on type 'AudioRecorder'.
+interface AudioRecorderEvents {
+  data: (data: string) => void;
+  volume: (volume: number) => void;
+}
+export class AudioRecorder extends EventEmitter<AudioRecorderEvents> {
   stream: MediaStream | undefined;
   audioContext: AudioContext | undefined;
   source: MediaStreamAudioSourceNode | undefined;
@@ -60,45 +63,51 @@ export class AudioRecorder extends EventEmitter<{
     }
 
     this.starting = new Promise(async (resolve, reject) => {
-      this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      this.audioContext = await audioContext({ sampleRate: this.sampleRate });
-      this.source = this.audioContext.createMediaStreamSource(this.stream);
+      try {
+        this.stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        this.audioContext = await audioContext({ sampleRate: this.sampleRate });
+        this.source = this.audioContext.createMediaStreamSource(this.stream);
 
-      const workletName = 'audio-recorder-worklet';
-      const src = createWorketFromSrc(workletName, AudioRecordingWorklet);
+        const workletName = 'audio-recorder-worklet';
+        const src = createWorketFromSrc(workletName, AudioRecordingWorklet);
 
-      await this.audioContext.audioWorklet.addModule(src);
-      this.recordingWorklet = new AudioWorkletNode(
-        this.audioContext,
-        workletName
-      );
+        await this.audioContext.audioWorklet.addModule(src);
+        this.recordingWorklet = new AudioWorkletNode(
+          this.audioContext,
+          workletName
+        );
 
-      this.recordingWorklet.port.onmessage = async (ev: MessageEvent) => {
-        // Worklet processes recording floats and messages converted buffer
-        const arrayBuffer = ev.data.data.int16arrayBuffer;
+        this.recordingWorklet.port.onmessage = async (ev: MessageEvent) => {
+          // Worklet processes recording floats and messages converted buffer
+          const arrayBuffer = ev.data.data.int16arrayBuffer;
 
-        if (arrayBuffer) {
-          const arrayBufferString = arrayBufferToBase64(arrayBuffer);
-          this.emit('data', arrayBufferString);
-        }
-      };
-      this.source.connect(this.recordingWorklet);
+          if (arrayBuffer) {
+            const arrayBufferString = arrayBufferToBase64(arrayBuffer);
+            this.emit('data', arrayBufferString);
+          }
+        };
+        this.source.connect(this.recordingWorklet);
 
-      // vu meter worklet
-      const vuWorkletName = 'vu-meter';
-      await this.audioContext.audioWorklet.addModule(
-        createWorketFromSrc(vuWorkletName, VolMeterWorket)
-      );
-      this.vuWorklet = new AudioWorkletNode(this.audioContext, vuWorkletName);
-      this.vuWorklet.port.onmessage = (ev: MessageEvent) => {
-        this.emit('volume', ev.data.volume);
-      };
+        // vu meter worklet
+        const vuWorkletName = 'vu-meter';
+        await this.audioContext.audioWorklet.addModule(
+          createWorketFromSrc(vuWorkletName, VolMeterWorket)
+        );
+        this.vuWorklet = new AudioWorkletNode(this.audioContext, vuWorkletName);
+        this.vuWorklet.port.onmessage = (ev: MessageEvent) => {
+          this.emit('volume', ev.data.volume);
+        };
 
-      this.source.connect(this.vuWorklet);
-      this.recording = true;
-      resolve();
-      this.starting = null;
+        this.source.connect(this.vuWorklet);
+        this.recording = true;
+        resolve();
+      } catch (err) {
+        reject(err);
+      } finally {
+        this.starting = null;
+      }
     });
+    return this.starting;
   }
 
   stop() {
@@ -112,7 +121,7 @@ export class AudioRecorder extends EventEmitter<{
       this.vuWorklet = undefined;
     };
     if (this.starting) {
-      this.starting.then(handleStop);
+      this.starting.finally(handleStop);
       return;
     }
     handleStop();

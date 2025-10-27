@@ -61,28 +61,25 @@ type BlinkProps = {
 
 export function useBlink({ speed }: BlinkProps) {
   const [eyeScale, setEyeScale] = useState(1);
-  const [frame, setFrame] = useState(0);
-
   const frameId = useRef(-1);
+  const frame = useRef(0);
 
   useEffect(() => {
-    function nextFrame() {
-      frameId.current = window.requestAnimationFrame(() => {
-        setFrame(frame + 1);
-        let s = easeOutQuint((Math.sin(frame * speed) + 1) * 2);
-        s = smoothstep(0.1, 0.25, s);
-        s = Math.min(1, s);
-        setEyeScale(s);
-        nextFrame();
-      });
-    }
+    const animate = () => {
+      frame.current += 1;
+      let s = easeOutQuint((Math.sin(frame.current * speed) + 1) * 2);
+      s = smoothstep(0.1, 0.25, s);
+      s = Math.min(1, s);
+      setEyeScale(s);
+      frameId.current = requestAnimationFrame(animate);
+    };
 
-    nextFrame();
+    frameId.current = requestAnimationFrame(animate);
 
     return () => {
-      window.cancelAnimationFrame(frameId.current);
+      cancelAnimationFrame(frameId.current);
     };
-  }, [speed, eyeScale, frame]);
+  }, [speed]);
 
   return eyeScale;
 }

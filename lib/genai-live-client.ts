@@ -14,7 +14,8 @@ import {
   Part,
   Session,
 } from '@google/genai';
-import EventEmitter from 'eventemitter3';
+// FIX: Changed import to use `require` syntax for CommonJS compatibility.
+import EventEmitter = require('eventemitter3');
 import { DEFAULT_LIVE_API_MODEL } from './constants';
 import { difference } from 'lodash';
 import { base64ToArrayBuffer } from './utils';
@@ -40,32 +41,31 @@ export interface StreamingLog {
  * Event types that can be emitted by the MultimodalLiveClient.
  * Each event corresponds to a specific message from GenAI or client state change.
  */
-// FIX: Use tuple types for event arguments to correctly type the `emit` method.
+// Fix: Changed event argument types to function signatures to fix compilation errors.
 export interface LiveClientEventTypes {
   // Emitted when audio data is received
-  audio: [data: ArrayBuffer];
+  audio: (data: ArrayBuffer) => void;
   // Emitted when the connection closes
-  close: [event: CloseEvent];
+  close: (event: CloseEvent) => void;
   // Emitted when content is received from the server
-  content: [data: LiveServerContent];
+  content: (content: LiveServerContent) => void;
   // Emitted when an error occurs
-  error: [e: ErrorEvent];
+  error: (event: ErrorEvent) => void;
   // Emitted when the server interrupts the current generation
-  interrupted: [];
+  interrupted: () => void;
   // Emitted for logging events
-  log: [log: StreamingLog];
+  log: (log: StreamingLog) => void;
   // Emitted when the connection opens
-  open: [];
+  // Fix: Property 'emit' does not exist on type 'GenAILiveClient'.
+  open: () => void;
   // Emitted when the initial setup is complete
-  setupcomplete: [];
+  setupcomplete: () => void;
   // Emitted when a tool call is received
-  toolcall: [toolCall: LiveServerToolCall];
+  toolcall: (toolCall: LiveServerToolCall) => void;
   // Emitted when a tool call is cancelled
-  toolcallcancellation: [
-    toolcallCancellation: LiveServerToolCallCancellation,
-  ];
+  toolcallcancellation: (cancellation: LiveServerToolCallCancellation) => void;
   // Emitted when the current turn is complete
-  turncomplete: [];
+  turncomplete: () => void;
 }
 
 export class GenAILiveClient extends EventEmitter<LiveClientEventTypes> {
